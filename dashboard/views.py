@@ -77,7 +77,7 @@ def text_formatting(text):
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": system_prompt},
+                {"role": "system", "content": contents},
                 {"role": "user", "content": text}
             ],
             max_tokens=50,
@@ -85,8 +85,8 @@ def text_formatting(text):
 
         response_text = response.choices[0].message.content.strip()
 
-        if ":" in response.text:
-            return response.text.split(": ")
+        if ":" in response_text:
+            return response_text.split(": ")
         else:
             return ["Break", "0"]
     except Exception as e:
