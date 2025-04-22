@@ -13,6 +13,8 @@ class Goal(models.Model):
     completed = models.BooleanField(default=False)
     abandoned = models.BooleanField(default=False)
     favorite = models.BooleanField(default=False)
+    total_duration_seconds = models.IntegerField(default=0)
+    calories_burnt_per_second = models.FloatField(default=0.0)
 
     def __str__(self):
         return self.text

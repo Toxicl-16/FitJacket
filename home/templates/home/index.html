@@ -1,18 +1,177 @@
 {% extends 'base.html' %}
 {% block content %}
-<header class="masthead bg-index text-white text-center py-4">
-  <div class="container d-flex align-items-center flex-column pt-2">
-    <h2>FitJacket</h2>
-    <p>Your Workout App for Better Health!</p>
+{% load static %}
+
+<!-- Hero Section -->
+<header class="masthead bg-dark text-white text-center d-flex align-items-center justify-content-center flex-column position-relative" style="background: url('{% static 'img/fitness_bg.jpg' %}') no-repeat center center/cover; min-height: 100vh;">
+  <div class="container position-relative">
+    <h1 class="display-3 fw-bold animate__animated animate__fadeInDown">Welcome to FitJacket</h1>
+    <p class="lead mb-4 animate__animated animate__fadeInUp animate__delay-1s">Your Ultimate Workout Tracker</p>
+    <a href="#features" class="btn btn-outline-light btn-lg mt-3 animate__animated animate__fadeInUp animate__delay-2s">
+      <i class="bi bi-arrow-down"></i> Explore
+    </a>
+    <p class="mt-4 animate__animated animate__fadeInUp animate__delay-2s">Achieve your fitness goals with real-time tracking, motivation, and community support!</p>
   </div>
 </header>
-<div class="p-3">
-  <div class="container">
-    <div class="row mt-3">
-      <div class="col mx-auto text-center mb-3">
-        <h4>Let's Get Healthy!!</h4>
+
+<!-- Features Section -->
+<section id="features" class="py-5">
+  <div class="container text-center">
+    <h2 class="mb-5">What You Can Do</h2>
+    <div class="row g-4">
+      <div class="col-md-4">
+        <div class="p-4 shadow rounded h-100 hover-lift feature-card">
+          <i class="bi bi-bar-chart-line display-4 text-success mb-3"></i>
+          <h5>Track Your Goals</h5>
+          <p class="text-muted">Set goals, track progress, and crush milestones.</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="p-4 shadow rounded h-100 hover-lift feature-card">
+          <i class="bi bi-heart-pulse display-4 text-danger mb-3"></i>
+          <h5>Monitor Calories</h5>
+          <p class="text-muted">See how many calories you burn in real time with beautiful live graphs.</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="p-4 shadow rounded h-100 hover-lift feature-card">
+          <i class="bi bi-people display-4 text-primary mb-3"></i>
+          <h5>Join Groups</h5>
+          <p class="text-muted">Stay motivated by joining fitness communities and sharing your victories!</p>
+        </div>
       </div>
     </div>
   </div>
-</div>
+</section>
+
+<!-- Why Choose FitJacket Section -->
+<section class="py-5 bg-dark text-white">
+  <div class="container text-center">
+    <h2 class="mb-4">Why Choose FitJacket?</h2>
+    <p class="lead">We combine personalized fitness tracking, community support, and real-time motivation to help you crush your goals — and have fun doing it!</p>
+  </div>
+</section>
+
+<!-- Motivational Quotes Carousel -->
+<section class="py-5 bg-light">
+  <div class="container text-center">
+    <h2 class="mb-4">Stay Inspired</h2>
+    <div id="quotesCarousel" class="carousel slide carousel-fade" data-bs-ride="carousel">
+      <div class="carousel-inner mb-4">
+        <div class="carousel-item active">
+          <p class="lead">"The only bad workout is the one that didn't happen."</p>
+        </div>
+        <div class="carousel-item">
+          <p class="lead">"Push yourself, because no one else is going to do it for you."</p>
+        </div>
+        <div class="carousel-item">
+          <p class="lead">"Fitness is about being better than you were yesterday."</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Stats Section with Parallax Effect and Animated Counters -->
+<section class="parallax-section py-5">
+  <div class="container text-center text-black">
+    <div class="row">
+      <div class="col-md-4 mb-4">
+        <h3 class="fw-bold counter" data-target="500">0</h3>
+        <p>Goals Completed</p>
+      </div>
+      <div class="col-md-4 mb-4">
+        <h3 class="fw-bold counter" data-target="50000">0</h3>
+        <p>Calories Burned</p>
+      </div>
+      <div class="col-md-4 mb-4">
+        <h3 class="fw-bold counter" data-target="300">0</h3>
+        <p>Happy Members</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Animate.css -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css"/>
+
+<!-- Custom Parallax + Hover Effects -->
+<style>
+  .parallax-section {
+    background: url('{% static 'img/stats_bg.jpg' %}') no-repeat center center/cover;
+    background-attachment: fixed;
+  }
+  .hover-lift:hover {
+    transform: translateY(-8px);
+    transition: transform 0.3s;
+  }
+  .feature-card {
+    opacity: 0;
+    transform: translateY(50px);
+    transition: all 0.6s ease-out;
+  }
+  .feature-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+</style>
+
+<!-- Bootstrap Carousel + Features Animation Script -->
+<script>
+  var myCarousel = document.querySelector('#quotesCarousel');
+  var carousel = new bootstrap.Carousel(myCarousel, {
+    interval: 5000,
+    ride: 'carousel',
+    pause: false
+  });
+
+  const counters = document.querySelectorAll('.counter');
+  const speed = 200;
+
+  counters.forEach(counter => {
+    const animate = () => {
+      const value = +counter.getAttribute('data-target');
+      const data = +counter.innerText;
+      const increment = value / speed;
+
+      if (data < value) {
+        counter.innerText = Math.ceil(data + increment);
+        setTimeout(animate, 20);
+      } else {
+        counter.innerText = value;
+      }
+    };
+
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          animate();
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 1.0 });
+
+    observer.observe(counter);
+  });
+
+  document.querySelector('a[href="#features"]').addEventListener('click', function(e) {
+    e.preventDefault();
+    document.querySelector('#features').scrollIntoView({ behavior: 'smooth' });
+  });
+
+  const featureCards = document.querySelectorAll('.feature-card');
+  const observerFeatures = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observerFeatures.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.3 });
+
+  featureCards.forEach(card => observerFeatures.observe(card));
+</script>
+
 {% endblock content %}

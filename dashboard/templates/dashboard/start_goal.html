@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% block content %}
+{% load static %}
+
+<div class="container text-center my-5">
+    <h1 class="mb-4">{{ goal.text }}</h1>
+
+    <h3 id="timer">0:00</h3>
+    <h3 id="calories">Calories Burned: 0 kcal</h3>
+
+    <button id="start-btn" class="btn btn-success btn-lg my-3">Start Workout</button>
+
+    <button id="finish-btn" class="btn btn-danger btn-lg my-3" style="display:none;">
+        Finish Workout 🏁
+    </button>
+
+    <form id="complete-form" method="POST" action="{% url 'complete_goal' %}" style="display:none;">
+        {% csrf_token %}
+        <input type="hidden" name="goal_id" value="{{ goal.id }}">
+        <input type="hidden" id="calories_burned_input" name="calories_burned" value="0">
+        <button type="submit" class="btn btn-primary">Save Workout ✅</button>
+    </form>
+
+    <canvas id="caloriesChart" width="400" height="200" class="mt-4"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+// Variables
+let totalSecondsElapsed = 0;
+let caloriesPerSecond = {{ goal.calories_burnt_per_second|floatformat:2 }};
+let caloriesBurned = 0;
+let interval;
+
+// DOM Elements
+const timerDisplay = document.getElementById('timer');
+const caloriesDisplay = document.getElementById('calories');
+const startButton = document.getElementById('start-btn');
+const finishButton = document.getElementById('finish-btn');
+const completeForm = document.getElementById('complete-form');
+const caloriesInput = document.getElementById('calories-burned-input');
+
+// Chart.js setup
+const ctx = document.getElementById('caloriesChart').getContext('2d');
+const caloriesChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: [{
+            label: 'Calories Burned',
+            data: [],
+            backgroundColor: 'rgba(75, 192, 192, 0.4)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 2,
+            fill: true,
+        }]
+    },
+    options: {
+        scales: {
+            x: {
+                title: { display: true, text: 'Time (mm:ss)' },
+                ticks: {
+                    callback: function(value) {
+                        let minutes = Math.floor(value / 60);
+                        let seconds = value % 60;
+                        return minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+                    }
+                }
+            },
+            y: {
+                title: { display: true, text: 'Calories Burned' },
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// Start Button Logic
+startButton.addEventListener('click', function() {
+    startButton.disabled = true;
+    finishButton.style.display = 'inline-block'; // Show the finish button
+
+    interval = setInterval(function() {
+        totalSecondsElapsed++;
+        caloriesBurned += caloriesPerSecond;
+
+        // Update timer in mm:ss format
+        let minutes = Math.floor(totalSecondsElapsed / 60);
+        let seconds = totalSecondsElapsed % 60;
+        timerDisplay.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+
+        caloriesDisplay.textContent = "Calories Burned: " + caloriesBurned.toFixed(2) + " kcal";
+
+        // Update chart
+        caloriesChart.data.labels.push(totalSecondsElapsed);
+        caloriesChart.data.datasets[0].data.push(caloriesBurned);
+        caloriesChart.update();
+    }, 1000);
+});
+
+// Finish Button Logic
+finishButton.addEventListener('click', function() {
+    clearInterval(interval); // Stop counting
+    document.getElementById('calories_burned_input').value = caloriesBurned.toFixed(2); // Update hidden input
+    completeForm.style.display = 'block'; // Show Save form
+    finishButton.disabled = true; // Disable finish button after use
+});
+
+</script>
+
+{% endblock %}

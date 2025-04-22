@@ -1,12 +1,12 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
-from .models import Goal, Profile
+from .models import Goal, Profile, Progress
 from django.contrib import messages
 from django.utils import timezone
-from google import genai
+from openai import OpenAI
 from dotenv import load_dotenv
+import json
 import os
-from .models import Progress
 
 
 load_dotenv()
@@ -29,13 +29,19 @@ def dashboard(request):
             if end_date <= start_date:
                 messages.error(request, "End date cannot be before or on the start date.")
             elif text and len(text) <= 100:
-                goal_format = text_formatting(text)
-                goal_text = goal_format[0] + " - " + goal_format[1] + " minutes"
-                start_date = timezone.datetime.strptime(start_date, "%Y-%m-%d")
-                end_date = timezone.datetime.strptime(end_date, "%Y-%m-%d")
+                exercise_type, duration_minutes, calories_per_minute = text_formatting(text)
+                goal_text = f"{exercise_type} - {duration_minutes} minutes"
+                start_date = timezone.make_aware(timezone.datetime.strptime(start_date, "%Y-%m-%d"))
+                end_date = timezone.make_aware(timezone.datetime.strptime(end_date, "%Y-%m-%d"))
 
-                create_goal(request.user, goal_text, start_date, end_date)
-
+                Goal.objects.create(
+                    text=goal_text,
+                    user=request.user,
+                    start_date=start_date,
+                    end_date=end_date,
+                    total_duration_seconds=duration_minutes * 60,
+                    calories_burnt_per_second=calories_per_minute / 60
+                )
             else:
                 messages.error(request, "Goal must be 100 characters or less")
 
@@ -138,29 +144,90 @@ def create_goal(user, text, start_date, end_date):
 
 def text_formatting(text):
     try:
-        client = genai.Client(api_key=os.getenv('GENAI_API_KEY'))
-        contents = (
-            "You are to extract the type of exercise and duration from the user's sentence. "
-            "Only output in this exact format: '[ExerciseType]: [DurationInMinutes]'. "
-            "If no valid exercise is found but time is found, output 'Break: [DurationInMinutes]'. "
-            "If no valid exercise and time is found, output 'Break: 0'. "
-            "No context. Only use this input: "
-        )
-        response = client.models.generate_content(
-            model="gemini-2.0-flash", contents=contents + " " + text
+        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
+        # Prompt the AI to extract exercise, duration, AND calories per minute
+        system_prompt = (
+            "You will extract exercise type, duration in minutes, and estimate calories burned per minute. "
+            "Return in JSON format like this: "
+            "{\"exercise\": \"Jump Rope\", \"duration_minutes\": 20, \"calories_per_minute\": 12}"
         )
 
-        if ":" in response.text:
-            return response.text.split(": ")
-        else:
-            return ["Break", "0"]
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": text}
+            ],
+            max_tokens=100,
+        )
+
+        response_text = response.choices[0].message.content.strip()
+
+        parsed = json.loads(response_text)
+
+        exercise_type = parsed.get("exercise", "Unknown Exercise")
+        duration_minutes = parsed.get("duration_minutes", 0)
+        calories_per_minute = parsed.get("calories_per_minute", 0)
+
+        return exercise_type, duration_minutes, calories_per_minute
+
     except Exception as e:
         print(f"Error with AI request: {e}")
-        return ["Break", "0"]
+        return "Break", 0, 0
+
 
 
 @login_required
 def progress_view(request):
     user_progress = Progress.objects.filter(user=request.user)
-    return render(request, 'dashboard/progress.html', {'progress_data': user_progress})
+    completed = Goal.objects.filter(user=request.user, completed=True).count()
+    remaining = Goal.objects.filter(user=request.user, completed=False, abandoned=False).count()
+    abandoned = Goal.objects.filter(user=request.user, abandoned=True).count()
+
+    total_goals = completed + remaining + abandoned
+    if total_goals > 0:
+        total_completion_percentage = round((completed / total_goals) * 100)
+        total_remaining_percentage = 100 - total_completion_percentage
+    else:
+        total_completion_percentage = 0
+        total_remaining_percentage = 100
+
+    return render(request, 'dashboard/progress.html', {
+        'progress_data': user_progress,
+        'completed_goals_count': completed,
+        'remaining_goals_count': remaining,
+        'abandoned_goals_count': abandoned,
+        'total_completion_percentage': total_completion_percentage,
+        'total_remaining_percentage': total_remaining_percentage,
+    })
+
+@login_required
+def start_goal(request, goal_id):
+    goal = Goal.objects.get(id=goal_id)
+
+    return render(request, 'dashboard/start_goal.html', {
+        'goal': goal,
+    })
+
+@login_required
+def complete_goal(request):
+    if request.method == 'POST':
+        goal_id = request.POST.get('goal_id')
+        calories_burned = request.POST.get('calories_burned')
+
+        goal = Goal.objects.get(id=goal_id)
+
+        Progress.objects.create(
+            user=request.user,
+            goal_name=goal.text,
+            progress_value=round(float(calories_burned)),
+            target_value=goal.total_duration_seconds,
+        )
+
+        goal.completed = True
+        goal.save()
+
+        return redirect('progress')
+
 

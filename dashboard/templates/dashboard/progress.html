@@ -16,7 +16,7 @@
       <div class="card text-white bg-primary mb-3 shadow-sm animate__animated animate__fadeInUp">
         <div class="card-body">
           <h5 class="card-title">Total Goals</h5>
-          <p class="card-text display-6">{{ progress_data|length }}</p>
+          <p class="card-text display-6">{{ completed_goals_count|add:remaining_goals_count|add:abandoned_goals_count }}</p>
         </div>
       </div>
     </div>
