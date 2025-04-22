@@ -163,4 +163,3 @@ def text_formatting(text):
 def progress_view(request):
     user_progress = Progress.objects.filter(user=request.user)
     return render(request, 'dashboard/progress.html', {'progress_data': user_progress})
-
