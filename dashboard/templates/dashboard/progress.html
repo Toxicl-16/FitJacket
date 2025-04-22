@@ -2,18 +2,18 @@
 {% block content %}
 {% load static %}
 
-<div class="container my-5">
-  <h1 class="text-center mb-4">📈 My Progress</h1>
+<div class="container my-5 animate__animated animate__fadeIn">
+  <h1 class="text-center mb-4">📈 My Progress Dashboard</h1>
 
   <!-- Back to Dashboard Button -->
   <div class="text-center mb-4">
-    <a href="{% url 'Dashboard' %}" class="btn btn-secondary">⬅️ Back to Dashboard</a>
+    <a href="{% url 'Dashboard' %}" class="btn btn-secondary shadow">⬅️ Back to Dashboard</a>
   </div>
 
   <!-- Summary Stats Cards -->
-  <div class="row mb-5">
+  <div class="row mb-5 text-center">
     <div class="col-md-4">
-      <div class="card text-white bg-primary mb-3 shadow">
+      <div class="card text-white bg-primary mb-3 shadow-sm animate__animated animate__fadeInUp">
         <div class="card-body">
           <h5 class="card-title">Total Goals</h5>
           <p class="card-text display-6">{{ progress_data|length }}</p>
@@ -21,7 +21,7 @@
       </div>
     </div>
     <div class="col-md-4">
-      <div class="card text-white bg-success mb-3 shadow">
+      <div class="card text-white bg-success mb-3 shadow-sm animate__animated animate__fadeInUp">
         <div class="card-body">
           <h5 class="card-title">Goals Completed</h5>
           <p class="card-text display-6">{{ completed_goals_count }}</p>
@@ -29,7 +29,7 @@
       </div>
     </div>
     <div class="col-md-4">
-      <div class="card text-white bg-info mb-3 shadow">
+      <div class="card text-white bg-info mb-3 shadow-sm animate__animated animate__fadeInUp">
         <div class="card-body">
           <h5 class="card-title">Goals Remaining</h5>
           <p class="card-text display-6">{{ remaining_goals_count }}</p>
@@ -38,8 +38,18 @@
     </div>
   </div>
 
+  <!-- Total Progress Circle -->
+  <div class="card shadow-sm mb-5 text-center animate__animated animate__fadeInUp">
+    <div class="card-body">
+      <h5 class="card-title">Overall Progress</h5>
+      <div class="d-flex justify-content-center">
+        <canvas id="totalProgressCircle" width="200" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
   <!-- Progress Chart (Bar Chart) -->
-  <div class="card shadow mb-5">
+  <div class="card shadow-sm mb-5 animate__animated animate__fadeInUp">
     <div class="card-body">
       <h5 class="card-title">Progress Toward Each Goal</h5>
       <canvas id="progressChart" width="400" height="200"></canvas>
@@ -47,17 +57,17 @@
   </div>
 
   <!-- Goal Completion Status (Circle Chart) -->
-  <div class="card shadow mb-5">
+  <div class="card shadow-sm mb-5 animate__animated animate__fadeInUp">
     <div class="card-body">
       <h5 class="card-title">Goal Completion Status</h5>
       <canvas id="statusChart" width="400" height="200"></canvas>
     </div>
   </div>
 
-  <!-- Goal List and Progress Bars -->
-  <div class="card shadow">
+  <!-- Goal List with Progress Bars -->
+  <div class="card shadow-sm animate__animated animate__fadeInUp">
     <div class="card-body">
-      <h5 class="card-title">Goal Details</h5>
+      <h5 class="card-title text-center">Goal Details</h5>
       {% for p in progress_data %}
         <div class="mb-4">
           <h6>{{ p.goal_name }}</h6>
@@ -68,7 +78,7 @@
           </div>
         </div>
       {% empty %}
-        <p class="text-muted">No progress data yet.</p>
+        <p class="text-muted text-center">No progress data yet.</p>
       {% endfor %}
     </div>
   </div>
@@ -77,26 +87,42 @@
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Animate.css for Fade Effects -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
 
 <script>
-// Bar Chart - Progress Toward Each Goal
+// --- Bar Chart ---
 const ctx = document.getElementById('progressChart').getContext('2d');
 const progressChart = new Chart(ctx, {
     type: 'bar',
     data: {
         labels: [{% for p in progress_data %}'{{ p.goal_name }}',{% endfor %}],
         datasets: [{
-            label: 'Progress',
+            label: 'Progress (%)',
             data: [{% for p in progress_data %}{{ p.progress_value }},{% endfor %}],
-            backgroundColor: 'rgba(75, 192, 192, 0.5)',
+            backgroundColor: 'rgba(75, 192, 192, 0.6)',
             borderColor: 'rgba(75, 192, 192, 1)',
-            borderWidth: 1
+            borderWidth: 2
         }]
     },
     options: {
+        animation: {
+            duration: 2000,
+            easing: 'easeOutBounce'
+        },
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return context.parsed.y + '% completed';
+              }
+            }
+          }
+        },
         scales: {
             y: {
                 beginAtZero: true,
+                max: 100,
                 title: {
                   display: true,
                   text: 'Progress Value'
@@ -106,23 +132,22 @@ const progressChart = new Chart(ctx, {
     }
 });
 
-// Circle (Doughnut) Chart - Goal Completion Status
+// --- Status Doughnut Chart ---
 const ctx2 = document.getElementById('statusChart').getContext('2d');
 const statusChart = new Chart(ctx2, {
     type: 'doughnut',
     data: {
         labels: ['Completed', 'Remaining', 'Abandoned'],
         datasets: [{
-            label: 'Goal Status',
             data: [
                 {{ completed_goals_count|default:0 }},
                 {{ remaining_goals_count|default:0 }},
                 {{ abandoned_goals_count|default:0 }}
             ],
             backgroundColor: [
-                'rgba(75, 192, 192, 0.7)', // Completed - teal
-                'rgba(255, 205, 86, 0.7)',  // Remaining - yellow
-                'rgba(255, 99, 132, 0.7)'   // Abandoned - red
+                'rgba(75, 192, 192, 0.7)',
+                'rgba(255, 205, 86, 0.7)',
+                'rgba(255, 99, 132, 0.7)'
             ],
             borderColor: [
                 'rgba(75, 192, 192, 1)',
@@ -133,10 +158,52 @@ const statusChart = new Chart(ctx2, {
         }]
     },
     options: {
-        responsive: true,
+        animation: {
+            duration: 2000
+        },
         plugins: {
             legend: {
                 position: 'bottom'
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return context.label + ': ' + context.parsed + ' goals';
+                }
+              }
+            }
+        }
+    }
+});
+
+// --- Total Progress Circle ---
+const ctx3 = document.getElementById('totalProgressCircle').getContext('2d');
+const totalProgressCircle = new Chart(ctx3, {
+    type: 'doughnut',
+    data: {
+        labels: ['Progress', 'Remaining'],
+        datasets: [{
+            data: [{{ total_completion_percentage }}, {{ total_remaining_percentage }}],
+            backgroundColor: ['rgba(0, 200, 83, 0.7)', 'rgba(224, 224, 224, 0.7)'],
+            borderColor: ['rgba(0, 200, 83, 1)', 'rgba(224, 224, 224, 1)'],
+            borderWidth: 2
+        }]
+    },
+    options: {
+        responsive: false,
+        maintainAspectRatio: false,
+        animation: {
+            duration: 2000
+        },
+        cutout: '70%',
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return context.label + ': ' + context.parsed + '%';
+                }
+              }
             }
         }
     }
