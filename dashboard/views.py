@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect
 from .models import Goal, Profile
 from django.contrib import messages
 from django.utils import timezone
-from openai import OpenAI
+from google import genai
 from dotenv import load_dotenv
 import os
 
@@ -29,15 +29,11 @@ def dashboard(request):
             elif text and len(text) <= 100:
                 goal_format = text_formatting(text)
                 goal_text = goal_format[0] + " - " + goal_format[1] + " minutes"
-                start_date = timezone.make_aware(timezone.datetime.strptime(start_date, "%Y-%m-%d"))
-                end_date = timezone.make_aware(timezone.datetime.strptime(end_date, "%Y-%m-%d"))
+                start_date = timezone.datetime.strptime(start_date, "%Y-%m-%d")
+                end_date = timezone.datetime.strptime(end_date, "%Y-%m-%d")
 
-                Goal.objects.create(
-                    text=goal_text,
-                    user=request.user,
-                    start_date=start_date,
-                    end_date=end_date
-                )
+                create_goal(request.user, goal_text, start_date, end_date)
+
             else:
                 messages.error(request, "Goal must be 100 characters or less")
 
@@ -110,13 +106,10 @@ def mark_favorite(request):
             goal_id = request.POST.get('goal_id')
             goal = Goal.objects.get(id=goal_id)
             time_diff = goal.end_date - goal.start_date
+            start = timezone.now()
+            end = start + time_diff
 
-            Goal.objects.create(
-                text=goal.text,
-                user=request.user,
-                start_date=timezone.now(),
-                end_date=timezone.now() + time_diff
-            )
+            create_goal(request.user, goal.text, start, end)
 
             messages.success(request, "Goal added to Dashbord!")
             return redirect('Dashboard')
@@ -127,29 +120,36 @@ def mark_favorite(request):
     })
 
 
+def create_goal(user, text, start_date, end_date):
+    if timezone.is_naive(start_date):
+        start_date = timezone.make_aware(start_date)
+    if timezone.is_naive(end_date):
+        end_date = timezone.make_aware(end_date)
+
+    return Goal.objects.create(
+        text=text,
+        user=user,
+        start_date=start_date,
+        end_date=end_date
+    )
+
+
 def text_formatting(text):
     try:
-        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-
+        client = genai.Client(api_key=os.getenv('GENAI_API_KEY'))
         contents = (
             "You are to extract the type of exercise and duration from the user's sentence. "
             "Only output in this exact format: '[ExerciseType]: [DurationInMinutes]'. "
             "If no valid exercise is found but time is found, output 'Break: [DurationInMinutes]'. "
             "If no valid exercise and time is found, output 'Break: 0'. "
+            "No context. Only use this input: "
         )
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": contents},
-                {"role": "user", "content": text}
-            ],
-            max_tokens=50,
+        response = client.models.generate_content(
+            model="gemini-2.0-flash", contents=contents + " " + text
         )
 
-        response_text = response.choices[0].message.content.strip()
-
-        if ":" in response_text:
-            return response_text.split(": ")
+        if ":" in response.text:
+            return response.text.split(": ")
         else:
             return ["Break", "0"]
     except Exception as e:

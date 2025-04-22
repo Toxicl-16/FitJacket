@@ -19,12 +19,13 @@ class Goal(models.Model):
 
     @classmethod
     def expired_goals(cls, user):
-        now = localtime(timezone.now()).date()
+        today = timezone.now().date()
+
         expired = cls.objects.filter(
             user=user,
             completed=False,
             abandoned=False,
-            end_date__lt=now
+            end_date__date__lt=today
         )
         amount_expired = expired.count()
         expired.update(abandoned=True)
