@@ -100,7 +100,7 @@ def mark_favorite(request):
             goal.favorite = False
             goal.save()
             messages.success(request, "Goal Unfavorited!")
-            return redirect('FavoriteHistory') 
+            return redirect('FavoriteHistory')
 
         elif 'add_goal' in request.POST:
             goal_id = request.POST.get('goal_id')
