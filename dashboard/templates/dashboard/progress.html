@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% block content %}
+{% load static %}
+
+<div class="container my-5">
+  <h1 class="text-center mb-4">📈 My Progress</h1>
+
+  <!-- Back to Dashboard Button -->
+  <div class="text-center mb-4">
+    <a href="{% url 'Dashboard' %}" class="btn btn-secondary">⬅️ Back to Dashboard</a>
+  </div>
+
+  <!-- Summary Stats Cards -->
+  <div class="row mb-5">
+    <div class="col-md-4">
+      <div class="card text-white bg-primary mb-3 shadow">
+        <div class="card-body">
+          <h5 class="card-title">Total Goals</h5>
+          <p class="card-text display-6">{{ progress_data|length }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-white bg-success mb-3 shadow">
+        <div class="card-body">
+          <h5 class="card-title">Goals Completed</h5>
+          <p class="card-text display-6">{{ completed_goals_count }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-white bg-info mb-3 shadow">
+        <div class="card-body">
+          <h5 class="card-title">Goals Remaining</h5>
+          <p class="card-text display-6">{{ remaining_goals_count }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress Chart (Bar Chart) -->
+  <div class="card shadow mb-5">
+    <div class="card-body">
+      <h5 class="card-title">Progress Toward Each Goal</h5>
+      <canvas id="progressChart" width="400" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- Goal Completion Status (Circle Chart) -->
+  <div class="card shadow mb-5">
+    <div class="card-body">
+      <h5 class="card-title">Goal Completion Status</h5>
+      <canvas id="statusChart" width="400" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- Goal List and Progress Bars -->
+  <div class="card shadow">
+    <div class="card-body">
+      <h5 class="card-title">Goal Details</h5>
+      {% for p in progress_data %}
+        <div class="mb-4">
+          <h6>{{ p.goal_name }}</h6>
+          <div class="progress">
+            <div class="progress-bar bg-success" role="progressbar" style="width: {{ p.progress_value|floatformat:0 }}%;" aria-valuenow="{{ p.progress_value }}" aria-valuemin="0" aria-valuemax="100">
+              {{ p.progress_value }}%
+            </div>
+          </div>
+        </div>
+      {% empty %}
+        <p class="text-muted">No progress data yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+// Bar Chart - Progress Toward Each Goal
+const ctx = document.getElementById('progressChart').getContext('2d');
+const progressChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: [{% for p in progress_data %}'{{ p.goal_name }}',{% endfor %}],
+        datasets: [{
+            label: 'Progress',
+            data: [{% for p in progress_data %}{{ p.progress_value }},{% endfor %}],
+            backgroundColor: 'rgba(75, 192, 192, 0.5)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        scales: {
+            y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: 'Progress Value'
+                }
+            }
+        }
+    }
+});
+
+// Circle (Doughnut) Chart - Goal Completion Status
+const ctx2 = document.getElementById('statusChart').getContext('2d');
+const statusChart = new Chart(ctx2, {
+    type: 'doughnut',
+    data: {
+        labels: ['Completed', 'Remaining', 'Abandoned'],
+        datasets: [{
+            label: 'Goal Status',
+            data: [
+                {{ completed_goals_count|default:0 }},
+                {{ remaining_goals_count|default:0 }},
+                {{ abandoned_goals_count|default:0 }}
+            ],
+            backgroundColor: [
+                'rgba(75, 192, 192, 0.7)', // Completed - teal
+                'rgba(255, 205, 86, 0.7)',  // Remaining - yellow
+                'rgba(255, 99, 132, 0.7)'   // Abandoned - red
+            ],
+            borderColor: [
+                'rgba(75, 192, 192, 1)',
+                'rgba(255, 205, 86, 1)',
+                'rgba(255, 99, 132, 1)'
+            ],
+            borderWidth: 2
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+</script>
+
+{% endblock %}

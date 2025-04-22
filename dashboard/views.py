@@ -6,6 +6,8 @@ from django.utils import timezone
 from google import genai
 from dotenv import load_dotenv
 import os
+from .models import Progress
+
 
 load_dotenv()
 
@@ -155,3 +157,10 @@ def text_formatting(text):
     except Exception as e:
         print(f"Error with AI request: {e}")
         return ["Break", "0"]
+
+
+@login_required
+def progress_view(request):
+    user_progress = Progress.objects.filter(user=request.user)
+    return render(request, 'dashboard/progress.html', {'progress_data': user_progress})
+
