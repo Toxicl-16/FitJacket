@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect
 from .models import Goal, Profile
 from django.contrib import messages
 from django.utils import timezone
-from google import genai
+from openai import OpenAI
 from dotenv import load_dotenv
 import os
 
@@ -129,20 +129,27 @@ def mark_favorite(request):
 
 def text_formatting(text):
     try:
-        client = genai.Client(api_key=os.getenv('GENAI_API_KEY'))
+        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
         contents = (
             "You are to extract the type of exercise and duration from the user's sentence. "
             "Only output in this exact format: '[ExerciseType]: [DurationInMinutes]'. "
             "If no valid exercise is found but time is found, output 'Break: [DurationInMinutes]'. "
             "If no valid exercise and time is found, output 'Break: 0'. "
-            "No context. Only use this input: "
         )
-        response = client.models.generate_content(
-            model="gemini-2.0-flash", contents=contents + " " + text
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": contents},
+                {"role": "user", "content": text}
+            ],
+            max_tokens=50,
         )
 
-        if ":" in response.text:
-            return response.text.split(": ")
+        response_text = response.choices[0].message.content.strip()
+
+        if ":" in response_text:
+            return response_text.split(": ")
         else:
             return ["Break", "0"]
     except Exception as e:
